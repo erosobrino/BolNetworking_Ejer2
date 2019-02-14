@@ -10,10 +10,12 @@ using System.Threading.Tasks;
 
 namespace BolNetworking_Ejer2
 {
+    //Validado
     class Program
     {
         List<string> users = new List<string>();
         List<StreamWriter> clients = new List<StreamWriter>();
+        private static readonly object l = new object();
         static void Main(string[] args)
         {
             bool validPort = false;
@@ -33,28 +35,28 @@ namespace BolNetworking_Ejer2
                     while (true)
                     {
                         Socket client = s.Accept();
-                        Thread thread = new Thread(() => p.HiloCliente(client));
+                        Thread thread = new Thread(() => p.ClientThread(client));
                         thread.Start();
                     }
                 }
-                catch
+                catch (SocketException)
                 {
                     Console.WriteLine("Invalid port");
                 }
             Console.ReadLine();
         }
 
-        private void HiloCliente(Socket cliente)
+        private void ClientThread(Socket client)
         {
             bool exit = false;
             string name = "";
             string message;
             try
             {
-                IPEndPoint ieCliente = (IPEndPoint)cliente.RemoteEndPoint;
+                IPEndPoint ieCliente = (IPEndPoint)client.RemoteEndPoint;
                 Console.WriteLine("Client {0} conected in the port {1}",
                 ieCliente.Address, ieCliente.Port);
-                NetworkStream ns = new NetworkStream(cliente);
+                NetworkStream ns = new NetworkStream(client);
                 StreamReader sr = new StreamReader(ns);
                 StreamWriter sw = new StreamWriter(ns);
                 string welcome = "Welcome to the chatroom, introduce your name to continue";
@@ -63,10 +65,10 @@ namespace BolNetworking_Ejer2
                 name = sr.ReadLine() + "@" + ieCliente.Address;
                 sw.WriteLine("Your name will be: " + name);
                 sw.Flush();
-                clients.Add(sw);
-                users.Add(name);
-                try
+                lock (l)
                 {
+                    clients.Add(sw);
+                    users.Add(name);
                     foreach (StreamWriter swClient in clients)
                     {
                         if (swClient != sw)
@@ -81,7 +83,6 @@ namespace BolNetworking_Ejer2
                         }
                     }
                 }
-                catch (InvalidOperationException) { }//Salta al cerrar muchos clientes a la vez
                 while (!exit)
                 {
                     try
@@ -97,36 +98,29 @@ namespace BolNetworking_Ejer2
                                         exit = true;
                                         break;
                                     case "#list":
-                                        sw.WriteLine("\nThese are the clients");
-                                        try
+                                        lock (l)
                                         {
+                                            sw.WriteLine("\nThese are the clients");
                                             foreach (string user in users)
                                             {
                                                 sw.WriteLine(user);
                                             }
                                             sw.WriteLine();
                                         }
-                                        catch (InvalidOperationException) { }
                                         sw.Flush();
                                         break;
                                     default:
-                                        try
+                                        lock (l)
                                         {
                                             foreach (StreamWriter swCliente in clients)
                                             {
                                                 if (sw != swCliente)
                                                 {
-                                                    try
-                                                    {
-
-                                                        swCliente.WriteLine("{0}: {1}", name, message);
-                                                        swCliente.Flush();
-                                                    }
-                                                    catch { }
+                                                    swCliente.WriteLine("{0}: {1}", name, message);
+                                                    swCliente.Flush();
                                                 }
                                             }
                                         }
-                                        catch (InvalidOperationException) { }
                                         Console.WriteLine("{0}: {1}", name, message);
                                         sw.Flush();
                                         break;
@@ -135,7 +129,7 @@ namespace BolNetworking_Ejer2
                         }
                         else
                         {
-                            break;
+                            break;//exit=true
                         }
                     }
                     catch (IOException)
@@ -143,10 +137,10 @@ namespace BolNetworking_Ejer2
                         break;
                     }
                 }
-                clients.Remove(sw);
                 Console.WriteLine(name + " has left");
-                try
+                lock (l)
                 {
+                    clients.Remove(sw);
                     foreach (StreamWriter swClient in clients)
                     {
                         try
@@ -158,16 +152,15 @@ namespace BolNetworking_Ejer2
                         catch (IOException) { }
                     }
                 }
-                catch (InvalidOperationException) { }//Salta al cerrar muchos clientes a la vez
-                sw.Flush();
                 sw.Flush();
                 sw.Close();
                 sr.Close();
                 ns.Close();
             }
             catch (IOException) { }
-            users.Remove(name);
-            cliente.Close();
+            lock (l)
+                users.Remove(name);
+            client.Close();
         }
     }
 }

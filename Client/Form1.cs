@@ -14,6 +14,7 @@ using System.Windows.Forms;
 
 namespace Client
 {
+    //Validado
     public partial class Form1 : Form
     {
         string IP_SERVER;
@@ -35,7 +36,7 @@ namespace Client
             InitializeComponent();
         }
 
-        private void btConectar_Click(object sender, EventArgs e)
+        private void btConect_Click(object sender, EventArgs e)
         {
             txtServerMessage.Clear();
             try
@@ -56,6 +57,7 @@ namespace Client
                     {
                         txtServerMessage.AppendText(sr.ReadLine());
                         btSend.Enabled = true;
+                        btConnect.Enabled = false;
                     }
                     catch (IOException)
                     {
@@ -67,13 +69,28 @@ namespace Client
                     txtServerMessage.AppendText(String.Format("Error connection: {0}\nError code: {1}({2})", ee.Message, (SocketError)ee.ErrorCode, ee.ErrorCode));
                 }
             }
-            catch
+            catch (SocketException)
             {
                 IP_SERVER = "127.0.0.1";
                 port = 31416;
                 txtIp.Text = IP_SERVER;
                 txtPort.Text = port + "";
-                txtServerMessage.AppendText("Error in IP or Port, will use default");
+            }
+            catch (FormatException)
+            {
+                txtServerMessage.AppendText("Error in Port, will use default");
+                IP_SERVER = "127.0.0.1";
+                port = 31416;
+                txtIp.Text = IP_SERVER;
+                txtPort.Text = port + "";
+            }
+            catch (OverflowException)
+            {
+                txtServerMessage.AppendText("Error in Port, will use default");
+                IP_SERVER = "127.0.0.1";
+                port = 31416;
+                txtIp.Text = IP_SERVER;
+                txtPort.Text = port + "";
             }
         }
 
@@ -85,7 +102,6 @@ namespace Client
                 while (true)
                 {
                     string msg = sr.ReadLine();
-                    //Console.WriteLine(msg);
                     if (msg != null)
                     {
                         lock (l)
@@ -132,7 +148,10 @@ namespace Client
                     }
                 }
             }
-            catch (IOException) { txtServerMessage.AppendText("Sin Conexion"); }
+            catch (IOException)
+            {
+                txtServerMessage.AppendText("Sin Conexion");
+            }
         }
 
         private void btExit_Click(object sender, EventArgs e)
@@ -147,12 +166,16 @@ namespace Client
                 server.Close();
                 txtServerMessage.AppendText("Conection closed");
             }
-            catch { txtServerMessage.AppendText("Error Conection"); }
+            catch (IOException)
+            {
+                txtServerMessage.AppendText("Error Conection");
+            }
             btSend.Enabled = false;
             btExit.Enabled = false;
             btList.Enabled = false;
             nameIntroduced = false;
             contMessages = 0;
+            btConnect.Enabled = true;
         }
 
         private void btList_Click(object sender, EventArgs e)
@@ -162,7 +185,10 @@ namespace Client
                 sw.WriteLine("#list");
                 sw.Flush();
             }
-            catch { txtServerMessage.AppendText("Error Conection"); }
+            catch (IOException)
+            {
+                txtServerMessage.AppendText("Error Conection");
+            }
         }
     }
 }

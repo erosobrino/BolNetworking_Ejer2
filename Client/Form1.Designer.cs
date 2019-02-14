@@ -88,7 +88,7 @@
             this.btConnect.TabIndex = 4;
             this.btConnect.Text = "Connect";
             this.btConnect.UseVisualStyleBackColor = true;
-            this.btConnect.Click += new System.EventHandler(this.btConectar_Click);
+            this.btConnect.Click += new System.EventHandler(this.btConect_Click);
             // 
             // label2
             // 
